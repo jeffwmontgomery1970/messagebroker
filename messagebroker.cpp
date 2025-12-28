@@ -6,14 +6,31 @@
 
 using namespace std;
 
-Broker::Broker()
+void receivedEvent(char *eventName, char *format, void *data, size_t dataSize, void *userData)
 {
-   int result = sbio_create_receive_channel(BROKER_NAME, GRE_IO_TYPE_RDONLY | GRE_IO_TYPE_WRONLY, &handle);
+   Broker *broker = static_cast<Broker *>(userData);
+   sbioEvent_t newEvent = {eventName,format,(string)(static_cast<const char*>(data))};
+   broker->addReceivedEvent(newEvent);
+   
+   void Broker::receivedEvent(char *eventName, char *format, void *data, size_t dataSize) {
+   if (last10Events->find(eventName) != last10Events->end()) {
+      
+
+      last10Events->at(eventName).push_back(newEvent);
+      if (last10Events->at(eventName).size() > 10) {
+         last10Events->at(eventName).erase(last10Events->at(eventName).begin());
+      } else {
+         last10Events->at(eventName) = vector<sbioEvent_t>{newEvent};
+      }
+   }
+}
+       int result = sbio_create_receive_channel(BROKER_NAME, 0, &handle);
    if (result != 0) 
    {
       cerr << "Failed to create " << BROKER_NAME << " channel" << endl;
       exit(1);
    }
+   result = sbio_add_event_callback(handle, ".*", (sbio_event_callback_t)receivedEvent, this);
 };
 
 Broker::~Broker()
@@ -31,3 +48,15 @@ int main()
    }
    cout << endl;
 };
+
+bool Broker::getNextEvent(string name, sbioEvent_t event)
+{
+   if (last10Events->find(name) != last10Events->end() && !last10Events->at(name).empty()) 
+   {
+      event = last10Events->at(name).back();
+      return true;
+   }
+   return false;
+}
+
+

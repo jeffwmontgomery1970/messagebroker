@@ -16,12 +16,12 @@ FetchContent_MakeAvailable(googletest)
 find_package(Threads REQUIRED)
 
 add_executable(messagebroker messagebroker.cpp)
-target_link_libraries(messagebroker sbio-wrapper pthreads)
+target_link_libraries(messagebroker sbio-wrapper pthread)
 
 add_library(broker SHARED messagebroker.cpp)
-target_link_libraries(broker sbio-wrapper pthreads)
+target_link_libraries(broker sbio-wrapper pthread)
 
 enable_testing()
 add_executable(messagebroker_tests test_messagebroker.cpp)
-target_link_libraries(messagebroker_tests gtest_main sbio-wrapper broker pthreads)
+target_link_libraries(messagebroker_tests gtest_main sbio-wrapper broker pthread)
 add_test(NAME messagebroker_tests COMMAND messagebroker_tests)
