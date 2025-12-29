@@ -125,4 +125,14 @@ void Broker::broadCastEvent(sbioEvent_t event)
    }
 };
 
+void Broker::registerChannel(char const *name,char const* filter) 
+{
+   registeredChannels->insert_or_assign(name,filter);
+}
+
+void Broker::unregisterChannel(char const *name)
+{
+   registeredChannels->erase(name);
+}
+
 

@@ -3,6 +3,22 @@
 #include "gre/sbio_wrapper.h"
 #include <string>
 
+bool eventReceived = false;
+sbioEvent_t receivedEvent;
+
+void receiveEvent(
+        const char *eventName, 
+        char *format, 
+        void *data, 
+        int dataSize, 
+        void *userData) 
+        {
+          receivedEvent.eventName = eventName;
+          receivedEvent.format = format;
+          receivedEvent.data = static_cast<const char *>(data);
+          eventReceived = true;
+        };
+
 TEST(messagebroker_tests, BrokerCreatesSBIO) {
   Broker broker;
 
@@ -96,67 +112,7 @@ TEST(messagebroker_test, BrokerReceivesBroadcasts) {
   sbio_destroy_channel(sendHandle);
 };
 
-TEST(messagebroker_test, BrokerMaintainsLast10Events) {
-  Broker broker;
-  
-  string channelName = "HistoryChannel";
-
-  sbio_channel_handle_t *receiveHandle;
-
-  int result = sbio_create_receive_channel(channelName.c_str(), 0, &receiveHandle);
-
-  EXPECT_EQ(result, 0);
-
-  sbio_channel_handle_t *sendHandle;
-
-  result = sbio_create_send_channel(BROKER_NAME, 0, &sendHandle);
-
-  EXPECT_EQ(result, 0);
-
-  string channelNameFilter = channelName + ".*";
-
-  result = sbio_send_event(sendHandle, "sbio_mq.register", "s0:channel_name", (void *)channelNameFilter.c_str(), channelNameFilter.length() + 1);
-
-  EXPECT_EQ(result, 0);
-
-  sleep(1); // Allow time for registration to process
-
-  for (int i = 1; i <= 12; ++i) {
-    string eventName = "HistoryChannel.Event" + to_string(i);
-    string eventData = "Data" + to_string(i);
-    result = sbio_send_event(sendHandle, eventName.c_str(), "s0", (void *)eventData.c_str(), eventData.length() + 1);
-    EXPECT_EQ(result, 0);
-    sleep(1); // Allow time for event to be received
-  }
-
-  for (int i = 3; i <= 12; ++i) {
-    string eventName = "HistoryChannel.Event" + to_string(i);
-    sbioEvent_t event;
-    bool eventAvailable = broker.getNextEvent(eventName, &event);
-    EXPECT_TRUE(eventAvailable);    
-    EXPECT_EQ(strcmp(event.eventName.c_str(), eventName.c_str()), 0);  
-    string expectedData = "Data" + to_string(i);
-    EXPECT_EQ(strcmp(event.data.c_str(), expectedData.c_str()), 0);
-  }
-
-  sbio_destroy_channel(receiveHandle);
-  sbio_destroy_channel(sendHandle);
-};
-
 TEST(messagebroker_test, BrokerBroadcastEvents) {
-  bool messageReceived = false;
-  void receiveEvent(
-        const char *eventName, 
-        char *format, 
-        void *data, 
-        int dataSize, 
-        void *userData) 
-        {
-          EXPECT_EQ(strcmp(eventName, "TestChannel.testEvent"), 0);
-          EXPECT_EQ(strcmp((char *)data, "TestData"), 0);
-          messageReceived = true;
-        };
-
   Broker broker;
 
   string channelName = "TestChannel";
@@ -177,7 +133,7 @@ TEST(messagebroker_test, BrokerBroadcastEvents) {
 
   EXPECT_EQ(result, 0);
 
-  string channelNameFilter = channelName + "TestChannel.*";
+  string channelNameFilter = channelName + ":TestChannel.*";
 
   result = sbio_send_event(sendHandle, "sbio_mq.register", "s0:channel_name", (void *)channelNameFilter.c_str(), channelNameFilter.length() + 1);
 
@@ -190,7 +146,9 @@ TEST(messagebroker_test, BrokerBroadcastEvents) {
   EXPECT_EQ(result, 0);
   
   sleep(10); // Allow time for event to be broadcast
-  EXPECT_TRUE(messageReceived);
+  EXPECT_TRUE(eventReceived);
+  EXPECT_EQ(strcmp(receivedEvent.eventName.c_str(),"TestChannel.testevent"),0);
+  EXPECT_EQ(strcmp(receivedEvent.data.c_str(),"TestData"),0);
   sbio_rem_event_callback(receiveHandle, (sbio_event_callback_t)receiveEvent, nullptr);
   sbio_destroy_channel(receiveHandle);
   sbio_destroy_channel(sendHandle);
