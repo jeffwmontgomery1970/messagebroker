@@ -16,17 +16,15 @@ struct sbioEvent_t {
 class Broker
 {
     public:
-        Broker();
-        ~Broker();
-
-        void receivedEvent();
-        bool getNextEvent(string, sbioEvent_t);
+    Broker();
+    ~Broker();
+    bool getNextEvent(string, sbioEvent_t*);
+    void addReceivedEvent(sbioEvent_t);
     private:
         sbio_channel_handle_t *handle;
         map<string,string> *registeredChannels;
         map<string, vector<sbioEvent_t>> *last10Events;
-        void registerChannel(char *, char *);
-        void unregisterChannel(char *);
+        void registerChannel(const char *, const char *);
+        void unregisterChannel(const char *);
         void broadCastEvent(sbioEvent_t);
-        void receivedEvent(char *, char *, void *, size_t);
 };
