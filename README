@@ -1,0 +1,36 @@
+Build will require ubclude/gre include files to be accessible, on my machine I copied that folder to /usr/include
+You will also need the gre library files to be accessiblw, copying the gre lib files to /usr/lib worked for message
+
+bash compile_and_run.sh - builds the libpubsub.so library and copies it to your /usr/lib directory
+                        - runs the app program with all defaults which opens a Broker on read channel sbio_nq
+                        - log_file log to /tmp/broker.log_file
+
+To shutdown the broker without exiting you can open the app in a new terminal with the Broadcast option and enter shutdown when prompted, 
+this will close both the Broadcast app and the broker assuming you have not left any subscribers subscribed
+eg. ./app Broadcast
+
+With the broker not running you can run the unit tests for the Publisher and Subscriber by using the Test flag on the app
+eg. ./app Test
+You will see an output for each unit test run
+
+With the publisher running either on a command line or as a service you can then open new terminals in Subscriber mode,  by default the dubscriber will generate it's own random channel name and will subscribe itself to the broken using control channel sbio_mq
+eg. ./app Subscriber
+By default subscriber have an empty filter but you can add a filter with the -filter "filter" option
+The filter will be used to determin which event_types are sent to your subscriber
+eg. ./app Subscriber -filter Media*
+
+Once you are ready to send message to be broadcast you can open the app in Broadcast mode and set event type and event data to the broker to be broadcast to the subscribers
+eg. ./app Broadcast
+Again when you are done you can send the shutdown event_type to close all the subscribers and the broker
+
+To connect an event channel in Storyboard, first get the project running to open read channel
+Loading the MediaPlayer template and running it opens the MediaPlayer channel
+
+Then while running the app in Broadcast mode you can subscribe the MediaPlayer channel with any filter you would like to add, so enter subscribe as the event_type and MediaPlayer:filter for the message
+
+Now you can send messages to the MediaPlayer channel and app like the MediaPlay event which wil cause the currently loaded media file to start playing
+
+Be sure to send the unsubscribe event_type with the same message as was used to subscribe as the broker will not close until all subscribers have unsubscribed from the control channel
+
+The -log_file "log_file_path" param can also be used with the Publish or Subscriber modes to redirect the log files where you like.
+
