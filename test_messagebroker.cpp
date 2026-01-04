@@ -17,6 +17,7 @@ void receiveEvent(
           receivedEvent.format = format;
           receivedEvent.data = static_cast<const char *>(data);
           eventReceived = true;
+          cerr << "Received event: " << receivedEvent.eventName << " with data: " << receivedEvent.data << endl;
         };
 
 TEST(messagebroker_tests, BrokerCreatesSBIO) {
@@ -88,7 +89,7 @@ TEST(messagebroker_test, BrokerReceivesBroadcasts) {
 
   EXPECT_EQ(result, 0);
 
-  string channelNameFilter = channelName + ".*";
+  string channelNameFilter = channelName;
 
   result = sbio_send_event(sendHandle, "sbio_mq.register", "s0:channel_name", (void *)channelNameFilter.c_str(), channelNameFilter.length() + 1);
 
@@ -133,7 +134,7 @@ TEST(messagebroker_test, BrokerBroadcastEvents) {
 
   EXPECT_EQ(result, 0);
 
-  string channelNameFilter = channelName + ":TestChannel.*";
+  string channelNameFilter = channelName + ":" + channelName + ".*";
 
   result = sbio_send_event(sendHandle, "sbio_mq.register", "s0:channel_name", (void *)channelNameFilter.c_str(), channelNameFilter.length() + 1);
 

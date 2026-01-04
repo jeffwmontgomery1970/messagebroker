@@ -23,6 +23,44 @@ void receivedEvent(char *eventName, char *format, void *data, size_t dataSize, v
    broker->addReceivedEvent(newEvent);
 }
 
+bool wildcardMatch(const std::string &text, const std::string &pattern) {
+    size_t t = 0, p = 0;       // text and pattern indices
+    size_t starIdx = std::string::npos; // last position of '*' in pattern
+    size_t match = 0;          // position in text after last '*'
+
+    while (t < text.size()) {
+        // Case 1: Characters match or pattern has '?'
+        if (p < pattern.size() && (pattern[p] == '?' || pattern[p] == text[t])) {
+            ++t;
+            ++p;
+        }
+        // Case 2: Pattern has '*', record position and move pattern pointer
+        else if (p < pattern.size() && pattern[p] == '*') {
+            starIdx = p;
+            match = t;
+            ++p;
+        }
+        // Case 3: Last pattern char was '*', try to extend match
+        else if (starIdx != std::string::npos) {
+            p = starIdx + 1;
+            ++match;
+            t = match;
+        }
+        // Case 4: No match
+        else {
+            return false;
+        }
+    }
+
+    // Skip remaining '*' in pattern
+    while (p < pattern.size() && pattern[p] == '*') {
+        ++p;
+    }
+
+    return p == pattern.size();
+}
+
+
 Broker::Broker()
    : handle(nullptr), registeredChannels(new map<string,string>()), last10Events(new map<string, vector<sbioEvent_t>>())
 {
@@ -81,6 +119,7 @@ void Broker::addReceivedEvent(sbioEvent_t event)
          name = event.data;
          filter = "";
       }
+      cerr << "Registering channel " << name << " with filter " << filter << endl;
       registerChannel(name.c_str(),filter.c_str());
    } else if (event.eventName == "sbio_mq.unregister")
    {
@@ -108,10 +147,11 @@ void Broker::broadCastEvent(sbioEvent_t event)
       const string &channelName = entry.first;
       const string &filter = entry.second;
       // Simple filter matching: check if event name starts with filter
-      if (filter.empty() || event.eventName.find(filter.substr(0, filter.length()-1)) == 0) 
+      cerr << "Comparing eventName: " << event.eventName << " to filter: " << filter << endl;
+      if (filter.empty() || wildcardMatch(event.eventName, filter)) 
       {
          sbio_channel_handle_t *sendHandle;
-         int result = sbio_create_send_channel(channelName.c_str(), 0, &sendHandle);
+         int result = sbio_create_send_channel(channelName.c_str(), GRE_IO_TYPE_WRONLY, &sendHandle);
          if (result != 0) {
             cerr << "Failed to create sbio send channel for broadcasting" << endl;
             return;
